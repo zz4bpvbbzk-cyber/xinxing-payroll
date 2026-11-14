@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-TW">
+<head>
+<meta charset="utf-8" />
+<title>新興國小薪資清冊生成系統 使用手冊(網頁版)</title>
+<style>
+  body { max-width: 880px; margin: 0 auto; padding: 32px 40px; box-sizing: border-box;
+         font-family: "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
+         color: #1a1a1a; font-size: 16px; line-height: 1.8; }
+  header.doc-head { border-bottom: 4px solid #1e4e79; padding-bottom: 20px; margin-bottom: 28px; }
+  header.doc-head .kicker { color: #1e4e79; letter-spacing: .2em; font-size: 13px; margin-bottom: 8px; }
+  header.doc-head h1 { margin: 0 0 6px; font-size: 30px; color: #1e4e79; }
+  header.doc-head .meta { color: #666; font-size: 14px; }
+  h2 { color: #1e4e79; font-size: 21px; border-bottom: 2px solid #1e4e79; padding-bottom: 6px;
+       margin: 42px 0 14px; scroll-margin-top: 20px; }
+  h3 { font-size: 17px; margin: 22px 0 8px; }
+  p { text-align: justify; margin: 0 0 12px; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0 18px; font-size: 14.5px; }
+  th, td { border: 1px solid #c9d3de; padding: 8px 11px; text-align: left; vertical-align: top; }
+  th { background: #eef3f8; color: #1e4e79; }
+  code { background: #f2f4f7; padding: 1px 6px; border-radius: 4px; font-size: 13.5px; }
+  ul, ol { padding-left: 26px; margin: 0 0 14px; }
+  li { margin-bottom: 6px; }
+  .note, .tip { padding: 12px 16px; margin: 14px 0; font-size: 14.5px; border-radius: 4px; }
+  .note { background: #fdf6e3; border-left: 5px solid #d9a441; }
+  .tip { background: #eef7ee; border-left: 5px solid #4a8b4a; }
+  .speak { background: #eef3f8; padding: 10px 16px; border-radius: 6px; margin: 12px 0; }
+  .toc { background: #f7f9fb; border: 1px solid #dfe7ef; border-radius: 8px; padding: 16px 24px; margin: 20px 0; }
+  .toc a { color: #1e4e79; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .toc li { list-style: none; }
+  footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #ccc; color: #888; font-size: 13px; }
+</style>
+</head>
+<body>
+<header class="doc-head">
+  <div class="kicker">高雄市新興區新興國民小學 教務處</div>
+  <h1>薪資清冊生成系統 使用手冊</h1>
+  <div class="meta">技能名稱:xinxing-payroll|適用:115 學年度起,每學期沿用|2026-11-10 ‧ v1.0</div>
+</header>
+
+<nav class="toc">
+  <li><a href="#ch1">一、系統總覽</a></li>
+  <li><a href="#ch2">二、日後怎麼用:每學期跑一次</a></li>
+  <li><a href="#ch3">三、學期中:每月作業</a></li>
+  <li><a href="#ch4">四、維護:改設定、改規則、改版型</a></li>
+  <li><a href="#ch5">五、常見問題</a></li>
+  <li><a href="#ch6">六、計算規則速查</a></li>
+</nav>
+
+<h2 id="ch1">一、系統總覽</h2>
+<p>整套系統由三個部分組成,前兩者已上線運作,第三個是本手冊的主體:</p>
+<table>
+  <tr><th style="width:22%">組件</th><th style="width:44%">內容</th><th>日常要不要管</th></tr>
+  <tr><td>請假表單</td><td>GitHub Pages 網頁,老師填請假/派代,自動寫入 Google 試算表「請假派代紀錄」分頁</td><td>不用管;壞了才修</td></tr>
+  <tr><td>主系統試算表</td><td>34 個分頁:人員名冊、行事曆、授課設定、請假派代紀錄、示範清冊</td><td>日常查閱用;送會計的清冊以技能包生成為準</td></tr>
+  <tr><td><b>技能包 xinxing-payroll</b></td><td>生成器程式 + 五張原始範本 + 學期設定檔,存在 Genspark 技能庫</td><td>每學期用一次;維護見第四章</td></tr>
+</table>
+<div class="tip"><b>核心觀念:</b>清冊版型就是學校的原始檔,生成器只填數字、一格格式都不動;所有<b>規則</b>(算法、節次排除、12 月關帳)寫在程式與技能文件裡;所有<b>會變的東西</b>(單價、人員、課表、行事曆、關帳日)都放在設定檔 Excel,改一格就能重跑。</div>
+
+<h2 id="ch2">二、日後怎麼用:每學期跑一次</h2>
+<h3>2-1 開新對話即可,不用回原對話</h3>
+<p>技能已加入你的 Genspark 技能庫,<b>任何一個新對話</b>都會自動帶著全部規則與程式。開新對話後說:</p>
+<p class="speak">「跑 115 學年度第 2 學期薪資清冊」,並附上下面 2-2 的資料。</p>
+<h3>2-2 需要準備的資料(核對清單)</h3>
+<table>
+  <tr><th style="width:8%">✔</th><th style="width:24%">項目</th><th>說明</th></tr>
+  <tr><td>□</td><td>① 學期起訖</td><td>開學日、休業日(例:116/2/22 開學、116/6/30 休業式)</td></tr>
+  <tr><td>□</td><td>② 放假日</td><td>AI 會先查人事總處該年辦公日曆表;<b>學校自訂的</b>(補假上課日、校慶停課、休業式)請提供</td></tr>
+  <tr><td>□</td><td>③ 排課 JSON</td><td>排課系統匯出的課表 JSON(全校檔即可;個人檔也能併用,像本學期的丁師檔)</td></tr>
+  <tr><td>□</td><td>④ 人員異動</td><td>離校/新增名單;各類人員資料:固定節數 6 人每週堂數、超鐘點 9 人每週節數、直播 2 人協同日、越南語上課星期</td></tr>
+  <tr><td>□</td><td>⑤ 節次排除</td><td>哪些節次由輔導處等單位支應(姓名+星期+節+班級+科目)——<b>每學期可能不同</b>,要重新交代</td></tr>
+  <tr><td>□</td><td>⑥ 短代</td><td>不需預先給;只有「全日代理」的薪點→薪資要人工查表填</td></tr>
+</table>
+<h3>2-3 對話裡會發生什麼事</h3>
+<ol>
+  <li>建立新學期設定檔(學年度、學期、月分、起訖、關帳日)</li>
+  <li>查最新日曆 → 產生行事曆,貼給你核對</li>
+  <li>匯入排課 JSON,自動檢查節次排除是否都命中課表</li>
+  <li>生成整學期各月清冊(幾分鐘)</li>
+  <li>三道驗證(版型守衛、fixtures 比對、結構檢查)<b>全部通過才交付</b></li>
+  <li>你人工核對第一個月 → 回報無誤 → 寫入 fixtures 永久防呆</li>
+</ol>
+<div class="note"><b>12 月關帳:</b>12 月清冊只算到 20 日(含),讓清冊提早送會計;12 月下旬的課自動併入隔年 1 月清冊,1 月標題起訖會顯示 115.12.21 起。關帳日若改,改設定檔一格即可。</div>
+
+<h2 id="ch3">三、學期中:每月作業</h2>
+<ol>
+  <li>老師照常填請假表單,資料自動累積到試算表。</li>
+  <li>開對話說「出 X 月清冊」→ 拿到當月 5 張 Excel(固定節數/超鐘點/直播共學/越南語/短代)。</li>
+  <li>短代清冊:核對表單資料無誤;<b>全日代理列</b>(代理日數/薪點/薪資/導師費/勞健保)人工查表填入。</li>
+  <li>列印 → 核章 → 送會計。<b>12 月提早送</b>(只算到 20 日)。</li>
+  <li>每張清冊標題都有<b>計費起訖日</b>,跨月支領時會計可直接核對。</li>
+</ol>
+
+<h2 id="ch4">四、維護:改設定、改規則、改版型</h2>
+<table>
+  <tr><th style="width:30%">要改什麼</th><th>怎麼做</th></tr>
+  <tr><td>單價 405 調整</td><td>設定檔「參數」分頁的<b>單價</b>改一格,重跑即全域生效</td></tr>
+  <tr><td>12 月關帳日改變</td><td>設定檔「<b>十二月計費上限</b>」改一格(預設 20)</td></tr>
+  <tr><td>人員/課表學期中異動</td><td>設定檔對應分頁直接改(固定節數人員/週次制人員/越南語人員),或丟新的排課 JSON 重新匯入</td></tr>
+  <tr><td>算法改變(例:國定假日改成要扣)</td><td>開對話告訴 AI 規則 → AI 改程式、更新技能文件、重跑驗證,幾分鐘完成且永久生效</td></tr>
+  <tr><td>會計改版型</td><td>拿新的原始檔取代技能包 templates 裡的對應檔(人員排列照會計要求)</td></tr>
+  <tr><td>新學年</td><td>建立全新設定檔,範本沿用;每學期一份設定檔</td></tr>
+</table>
+<h3>4-1 fixtures 防呆機制(重要)</h3>
+<p>你核對過的月份,會把「該月各清冊總額+逐人數字」寫進設定檔旁的 <code>fixtures.json</code>。之後<b>任何一次重跑</b>,只要數字和已核對值不同(例如改程式、改課表時不小心動到已結案月份),驗證就會失敗擋下,不會默默算錯。目前 115-1 已寫入:9~1 月全部總額 + 10 月逐人地面真值。</p>
+<div class="note"><b>備份建議:</b>技能包本身存在技能庫(Genspark 帳號);建議每學期把「設定檔 + fixtures + 範本」備份一份到 AI 雲端硬碟或學校空間,以防帳號問題時可重建。</div>
+
+<h3>4-2 一鍵打包下載 ZIP</h3>
+<p>整學期清冊完成後,跟 AI 說「<b>打包成 ZIP</b>」(生成時預設會附),即得一個壓縮檔一次下載全部 Excel。解壓後的資料夾結構:</p>
+<table>
+  <tr><th style="width:34%">路徑</th><th>內容</th></tr>
+  <tr><td><code>115-1全套清冊/9月/</code> … <code>/1月/</code></td><td>每個月分一個資料夾,各 5 張:固定節數、超鐘點、直播共學、越南語、短代(空白)——檔名如 <code>115年9月-固定節數清冊.xlsx</code></td></tr>
+  <tr><td><code>115-1全套清冊/驗算報告-115-1.xlsx</code></td><td>逐月每人明細:節次排除、各清冊計算依據,給會計核對用</td></tr>
+</table>
+<p>學期別會反映在資料夾名(下學期為 <code>115-2全套清冊/</code>);只要列印時開各月資料夾全選列印即可。</p>
+
+<h2 id="ch5">五、常見問題</h2>
+<h3>Q:一定要回到原來那個對話嗎?</h3>
+<p>不用。技能在技能庫裡,新對話直接用;舊對話只在你想讓 AI 讀取這裡的歷史紀錄時才需要。</p>
+<h3>Q:下學期什麼時候開始準備?</h3>
+<p>1 月中拿到新課表後即可:確認 116 年 2 月開學日,連同課表 JSON 丟進新對話。</p>
+<h3>Q:可以只重出某一個月嗎?</h3>
+<p>可以。設定檔「月份」改成要重出的月(例:<code>3</code>),跑完改回;其他月份不受影響。</p>
+<h3>Q:9 月的歷史資料怎麼算?</h3>
+<p>9 月當時以均攤公式支付 140,940;節次制重算為 131,625(僅供對照,重出前先確認)。乙師 9 月差額走追減、由輔導處列冊支應。</p>
+<h3>Q:請假表單有問題?</h3>
+<p>已知「老師姓名自動完成」失效(程式變數 bug),不影響送出與收料;要修時開對話說「修請假表單」。</p>
+
+<h2 id="ch6">六、計算規則速查</h2>
+<table>
+  <tr><th style="width:20%">清冊</th><th>規則</th></tr>
+  <tr><td>固定節數</td><td>兼任 6 人:課表<b>每一節次 × 該月該星期之上課日數</b>加總(非均攤);甲師採計 25(26−輔導處兼輔 1);丙師、丁師為教學支援人員,排最後兩列</td></tr>
+  <tr><td>超鐘點</td><td>正式 9 人,週次制:含上課日的週(週一~日)算 1 週,<b>國定假日不扣</b>;乙師全學期移除(輔導處支應);請假扣節填 I 欄</td></tr>
+  <tr><td>直播共學</td><td>「有上課才支薪」純整月制:協同日(己師週一、庚師週四)當天是上課日才算(116.11.11 修訂,無開學月延伸;9 月重出 3+4=2,835,差額 810 追減)</td></tr>
+  <tr><td>越南語</td><td>戊師週二~五,每個上課日 1 節 405,逐日列;超過 17 節自動加列</td></tr>
+  <tr><td>短代</td><td>鐘點 405/節;全日代理走薪點制(代師甲 170→1399、代師乙 650→3049),人工查表;公費自費算法相同</td></tr>
+  <tr><td>跨月</td><td>12 月算到 20 日(關帳);下旬併入 1 月;1 月計費 115.12.21-116.01.20;所有清冊標題附計費起訖日</td></tr>
+</table>
+
+<footer>新興國小薪資清冊生成系統 使用手冊 v1.0(2026-11-10)|115 學年度上學期全學期驗證完成後初版</footer>
+</body>
+</html>
