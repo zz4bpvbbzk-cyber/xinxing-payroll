@@ -45,11 +45,7 @@ echo [2] 選擇學期設定檔:
 echo.
 set N=0
 set "CFG1=" & set "CFG2=" & set "CFG3=" & set "CFG4=" & set "CFG5=" & set "CFG6=" & set "CFG7=" & set "CFG8=" & set "CFG9="
-for %%f in (config\*.xlsx config-*\*.xlsx *.xlsx) do (
-    echo %%f | findstr /i "gen.py manual.html" >nul && goto skip
-    echo %%~ff | find /i "\templates\" >nul && goto skip
-    :skip
-)
+for %%f in (config\*.xlsx config-*\*.xlsx) do (
     set /a N+=1
     set "CFG!N!=%%f"
     echo     !N!. %%~nf
