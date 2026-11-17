@@ -52,8 +52,17 @@ for %%f in (config\*.xlsx config-*\*.xlsx) do (
 )
 if %N%==0 (
     echo.
-    echo [錯誤] config 資料夾裡沒有任何設定檔 .xlsx
-    echo        請先聯絡教學組長建立,或到 GitHub 下說明建立新學期設定檔
+    echo [錯誤] 這個資料夾裡找不到學期設定檔。
+    echo        正確結構:資料夾裡要有 scripts\ 、config-XXXX-X\ 、templates\ 和本檔案
+    echo.
+    echo [診斷] 本程式目前所在位置:%~dp0
+    echo [診斷] 同資料夾裡找到的東西:
+    dir /b 2>nul | findstr /r "^" 
+    echo [診斷] 全部子資料夾中的 .xlsx:
+    dir /s /b *.xlsx 2>nul
+    echo.
+    echo [解法] 請把「執行清冊.bat」放到和 scripts\ 同一層的資料夾裡再雙擊
+    echo        ^(從私有倉庫 Code -^> Download ZIP 解壓後的資料夾即是^)
     pause
     exit /b 1
 )
