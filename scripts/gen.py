@@ -326,6 +326,7 @@ def gen_live(cfg, y, m, tpl):
         ws.cell(r, 2).value = person[0]["職稱"]
         ws.cell(r, 4).value = wk_h
         ws.cell(r, 5).value = wks
+        ws.cell(r, 6).value = wk_h * wks  # 總堂數:範本此格可能是殘留舊值,一律由程式覆寫
         ws.cell(r, 7).value = cfg.price
         ws.cell(r, 9).value = f"{wd}協同"
         rows[name] = (wd, wks, wk_h * wks * cfg.price)
