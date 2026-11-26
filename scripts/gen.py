@@ -239,10 +239,8 @@ def gen_fixed(cfg, y, m, tpl):
 def gen_super(cfg, y, m, tpl):
     wb = openpyxl.load_workbook(tpl); ws = wb.worksheets[0]
     wks = cfg.super_weeks(y, m); n_weeks = len(wks)
-    _first = cfg.calc_days(y, m)[0]
-    _wkmon = _first - datetime.timedelta(days=_first.weekday())
-    if (_wkmon + datetime.timedelta(days=2)).month > m:
-        # 開學月整月只有開學週、且該週週三落在次月 → 依週次歸屬次月,本月不另出冊(避免雙重支付)
+    if len(wks) == 1 and (wks[0] + datetime.timedelta(days=2)).month > m:
+        # 開學月僅一個計費週、且該週週三落在次月 → 依週次歸屬次月,本月不另出冊(避免雙重支付)
         return None, {"total": 0, "rows": {}, "weeks": 0, "removed": [], "span": None}
     start, end = cfg.span(y, m)
     r = 6; num = 0; rows = {}; removed = []
@@ -461,6 +459,7 @@ def main():
         for m, s_ in report["months"].items():
             n = s_["viet"]["n"]; trow = 24 + max(0, n - 17)
             fp = os.path.join(outroot, f"{cfg.sa}-{cfg.sem}", f"{m}月", f"115年{m}月-越南語清冊.xlsx")
+            if not os.path.exists(fp): continue  # 本月 0 節未出冊
             wsg = openpyxl.load_workbook(fp).worksheets[0]
             assert wsg[f"A{trow}"].value == "總計" and str(wsg[f"C{trow}"].value).strip() == f"{n} 節", f"越南語{m}月總計位置/值錯誤"
             assert len(wsg.merged_cells.ranges) == len(wst.merged_cells.ranges), f"越南語{m}月合併儲存格數量改變"
