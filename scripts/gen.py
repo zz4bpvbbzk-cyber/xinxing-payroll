@@ -143,7 +143,7 @@ class Config:
     def live_weeks(self, wd_cn, y, m):
         """直播共學(純整月制,115.11.11 修訂):該清冊計費月內,協同星期幾為上課日的次數。
         國定假日/寒假自動扣;12 月關帳由 on_days 收斂、12 月下旬併入 1 月由 calc_days 處理。
-        沒有開學月延伸(舊版 9 月曾得己師4+庚師5;校方確認改純整月=3+4)。"""
+        沒有開學月延伸(舊版 9 月曾得陳碧雪4+周憶伶5;校方確認改純整月=3+4)。"""
         cn = ["星期一","星期二","星期三","星期四","星期五","星期六","星期日"]
         k = cn.index(wd_cn)
         return sum(1 for d in self.calc_days(y, m) if d.weekday() == k)
@@ -239,6 +239,11 @@ def gen_fixed(cfg, y, m, tpl):
 def gen_super(cfg, y, m, tpl):
     wb = openpyxl.load_workbook(tpl); ws = wb.worksheets[0]
     wks = cfg.super_weeks(y, m); n_weeks = len(wks)
+    _first = cfg.calc_days(y, m)[0]
+    _wkmon = _first - datetime.timedelta(days=_first.weekday())
+    if (_wkmon + datetime.timedelta(days=2)).month > m:
+        # 開學月整月只有開學週、且該週週三落在次月 → 依週次歸屬次月,本月不另出冊(避免雙重支付)
+        return None, {"total": 0, "rows": {}, "weeks": 0, "removed": [], "span": None}
     start, end = cfg.span(y, m)
     r = 6; num = 0; rows = {}; removed = []
     while ws.cell(r, 3).value and "合" not in str(ws.cell(r, 2).value or ""):
@@ -268,7 +273,7 @@ def gen_super(cfg, y, m, tpl):
 
 def gen_live(cfg, y, m, tpl):
     wb = openpyxl.load_workbook(tpl); ws = wb.worksheets[0]
-    r = 6; num = 0; rows = {}
+    r = 6; num = 0; rows = {}; removed_live = []
     while ws.cell(r, 3).value and "合" not in str(ws.cell(r, 2).value or ""):
         name = str(ws.cell(r, 3).value).strip()
         person = [p for p in cfg.weekly if p["姓名"] == name and p["類別"] == "直播共學"]
@@ -277,6 +282,10 @@ def gen_live(cfg, y, m, tpl):
         wks = cfg.live_weeks(wd, y, m)
         ex = cfg.excluded(name, "直播共學", m)
         wk_h = int(person[0]["每週節數"]) - ex
+        if wks - ex <= 0:
+            removed_live.append(name)
+            clear_row(ws, r, 9); ws.row_dimensions[r].hidden = True
+            r += 1; continue
         num += 1
         ws.cell(r, 1).value = num
         ws.cell(r, 2).value = person[0]["職稱"]
@@ -287,9 +296,10 @@ def gen_live(cfg, y, m, tpl):
         rows[name] = (wd, wks, wk_h * wks * cfg.price)
         r += 1
     total = sum(v[2] for v in rows.values())
-    retitle(ws, "B1", (y-1911, f"{m}"), (fmt_span(cfg.span(y, m)[0]), fmt_span(cfg.span(y, m)[1])))
+    _cs = cfg.calc_days(y, m)
+    retitle(ws, "B1", (y-1911, f"{m}"), (fmt_span(_cs[0]), fmt_span(_cs[-1])))
     ws.title = f"{y-1911}{m:02d}協同"
-    return wb, {"total": total, "rows": rows}
+    return wb, {"total": total, "rows": rows, "removed": removed_live}
 
 def gen_viet(cfg, y, m, tpl):
     wb = openpyxl.load_workbook(tpl); ws = wb.worksheets[0]
@@ -297,6 +307,8 @@ def gen_viet(cfg, y, m, tpl):
     cn = {"星期一":0,"星期二":1,"星期三":2,"星期四":3,"星期五":4}
     wds = [cn[w.strip()] for w in str(person["上課星期(逗號分隔)"]).split(",")]
     dates = [d for d in cfg.calc_days(y, m) if d.weekday() in wds]
+    if not dates:
+        return None, {"total": 0, "n": 0, "dates": []}
     price = int(person["單價"])
     TOTAL_ROW = 24            # 範本:資料 7-23(17 列),總計在第 24 列
     MAXR = 23
@@ -335,7 +347,7 @@ def gen_viet(cfg, y, m, tpl):
     ws.title = f"表5-{m}月印領清冊(教支老師)"
     return wb, {"total": len(dates) * price, "n": len(dates), "dates": [str(d) for d in dates]}
 
-CN = {9:"九",10:"十",11:"十一",12:"十二",1:"一",2:"二",3:"三",4:"四",5:"五",6:"六"}
+CN = {8:"八",9:"九",10:"十",11:"十一",12:"十二",1:"一",2:"二",3:"三",4:"四",5:"五",6:"六",7:"七"}
 def gen_short(cfg, y, m, tpl):
     wb = openpyxl.load_workbook(tpl); ws = wb.worksheets[0]
     for r in range(5, 18): clear_row(ws, r, 15)   # 清掉範本附帶的示範/前月資料列
@@ -417,12 +429,15 @@ def main():
         for key, tname in tplmap.items():
             tpl = os.path.join(TPL, tname)
             wb, info = genmap[key](cfg, y, m, tpl)
-            if not legacy:
-                bad = fmt_diff(wb, tpl, ALLOWED[key])
-                if key == "viet" and info.get("n", 0) > 17: bad = []  # 插列月份(12月)版型另以結構檢查
-                if bad: ok = False; report["diff"] += [f"{m}月 {tname}: {b}" for b in bad]
-            fname = f"115年{m}月-" + {"fixed":"固定節數清冊","super":"超鐘點清冊","live":"直播共學清冊","viet":"越南語清冊","short":"短代清冊(空白)"}[key] + ".xlsx"
-            wb.save(os.path.join(odir, fname))
+            if wb is None:
+                print(f"  [{m}月] {tname}:本月無計費內容,不出冊({info.get('note','0節/0週')})" if info.get("note") else f"  [{m}月] {tname}:本月無計費內容,不出冊")
+            else:
+                if not legacy:
+                    bad = fmt_diff(wb, tpl, ALLOWED[key])
+                    if key == "viet" and info.get("n", 0) > 17: bad = []  # 插列月份(12月)版型另以結構檢查
+                    if bad: ok = False; report["diff"] += [f"{m}月 {tname}: {b}" for b in bad]
+                fname = f"115年{m}月-" + {"fixed":"固定節數清冊","super":"超鐘點清冊","live":"直播共學清冊","viet":"越南語清冊","short":"短代清冊(空白)"}[key] + ".xlsx"
+                wb.save(os.path.join(odir, fname))
             sums[key] = info
         if fixtures:
             exp = (fixtures.get("legacy_totals" if legacy else "totals") or {}).get(str(m), {})
