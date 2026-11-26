@@ -282,7 +282,8 @@ def gen_live(cfg, y, m, tpl):
         wk_h = int(person[0]["每週節數"]) - ex
         if wks - ex <= 0:
             removed_live.append(name)
-            clear_row(ws, r, 9); ws.row_dimensions[r].hidden = True
+            clear_row(ws, r, 9); ws.cell(r, 3).value = name  # 隱藏列保留姓名,金額清空
+            ws.row_dimensions[r].hidden = True
             r += 1; continue
         num += 1
         ws.cell(r, 1).value = num
