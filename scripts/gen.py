@@ -223,8 +223,9 @@ def shift_merged(ws, first_row, k):
         if r2 >= first_row: r2 += k
         ws.merge_cells(f"{c1}{r1}:{c2}{r2}")
 
-def retitle(ws, coord, month_roc, span_s=None):
+def retitle(ws, coord, month_roc, span_s=None, sem_s=None):
     s = ws[coord].value
+    if sem_s: s = re.sub(r"\d{3}學年度第\d學期", sem_s, s)
     s = re.sub(r"\d{3}-\d{1,2}月份", f"{month_roc[0]}-{month_roc[1]}月份", s)
     if span_s: s = re.sub(r"\(\d{3}\.\d{2}\.\d{2}-\d{3}\.\d{2}\.\d{2}\)", f"({span_s[0]}-{span_s[1]})", s)
     ws[coord] = s
@@ -263,7 +264,7 @@ def gen_fixed(cfg, y, m, tpl):
         r += 1
     total = sum(v[2] for v in rows.values())
     cs = cfg.calc_days(y, m)
-    ws["A2"] = f"  {y-1911}年{m}月份固定授課節數兼任教師授課鐘點費({fmt_span(cs[0])}-{fmt_span(cs[-1])})"
+    ws["A2"] = f"  {cfg.sa}學年度第{cfg.sem}學期{y-1911}年{m}月份固定授課節數兼任教師授課鐘點費({fmt_span(cs[0])}-{fmt_span(cs[-1])})"
     ws["M3"] = f" {y-1911}年{cfg.made.month:02d}月{cfg.made.day:02d}日製表"
     ws.title = f"{y-1911}-{m:02d}固定授課"
     for p_ in cfg.fixed:
@@ -299,7 +300,7 @@ def gen_super(cfg, y, m, tpl):
         rows[name] = (wk_h, n_weeks, wk_h * n_weeks * cfg.price - ded * cfg.price)
         r += 1
     total = sum(v[2] for v in rows.values())
-    retitle(ws, "A1", (y-1911, f"{m:02d}"), (fmt_span(start), fmt_span(end)))
+    retitle(ws, "A1", (y-1911, f"{m:02d}"), (fmt_span(start), fmt_span(end)), f"{cfg.sa}學年度第{cfg.sem}學期")
     ws.title = f"{y-1911}{m:02d}"
     return wb, {"total": total, "rows": rows, "weeks": n_weeks, "removed": removed,
                 "span": (fmt_span(start), fmt_span(end))}
@@ -331,7 +332,7 @@ def gen_live(cfg, y, m, tpl):
         r += 1
     total = sum(v[2] for v in rows.values())
     _cs = cfg.calc_days(y, m)
-    retitle(ws, "B1", (y-1911, f"{m}"), (fmt_span(_cs[0]), fmt_span(_cs[-1])))
+    retitle(ws, "B1", (y-1911, f"{m}"), (fmt_span(_cs[0]), fmt_span(_cs[-1])), f"{cfg.sa}學年度第{cfg.sem}學期")
     ws.title = f"{y-1911}{m:02d}協同"
     return wb, {"total": total, "rows": rows, "removed": removed_live}
 
