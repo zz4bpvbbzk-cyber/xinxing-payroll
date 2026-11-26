@@ -32,6 +32,7 @@ class Config:
         self.excl     = tbl("節次排除", ["姓名","星期","節","班級","科目","支應單位","不採計清冊","生效月份"])
         self.fix_ovr  = tbl("固定節數覆寫", ["姓名","月分","本月總堂數"]) if "固定節數覆寫" in wb.sheetnames else []
         self.super_d  = tbl("超鐘點扣節", ["姓名","月分","本月扣節數(I欄)"]) if "超鐘點扣節" in wb.sheetnames else []
+        self.grad    = tbl("畢業後排除", ["類別","姓名","班級","星期","生效起日"]) if "畢業後排除" in wb.sheetnames else []
         self.sections = {}
         if "節次課表" in wb.sheetnames:
             for row in tbl("節次課表", ["姓名","星期","節","班級","科目"]):
@@ -125,6 +126,38 @@ class Config:
             n += 1
         return n
 
+    @staticmethod
+    def _pdate(v):
+        if isinstance(v, datetime.datetime): return v.date()
+        if isinstance(v, datetime.date): return v
+        return datetime.date.fromisoformat(str(v)[:10])
+
+    def grad_days(self, y, m):
+        """畢業後排除(固定節數):{班級: {weekday: 生效日起的上課日數}}"""
+        out = {}
+        for g in self.grad:
+            if str(g["類別"]).strip() != "固定節數": continue
+            st = self._pdate(g["生效起日"]); cnt = {}
+            for d in self.calc_days(y, m):
+                if d >= st: cnt[d.weekday()] = cnt.get(d.weekday(), 0) + 1
+            out[norm_class(g["班級"])] = cnt
+        return out
+
+    def grad_cut(self, y, m, slots):
+        """本月因畢業停課扣掉的堂數(slots: (星期,節,班級,科目))"""
+        gd = self.grad_days(y, m); cut = 0
+        for s in slots:
+            cc = gd.get(norm_class(s[2]))
+            if cc: cut += cc.get(s[0], 0)
+        return cut
+
+    def grad_stop(self, name, kind):
+        """畢業後排除(直播共學/越南語):該員生效起日"""
+        for g in self.grad:
+            if str(g["類別"]).strip() == kind and str(g["姓名"] or "").strip() == name:
+                return self._pdate(g["生效起日"])
+        return None
+
     def super_weeks(self, y, m):
         """超鐘點週數:週一~週日為一週,該週含計費日(含1月併入的12月下旬)即計 1 週"""
         weeks = set()
@@ -140,13 +173,13 @@ class Config:
         end = max(d for d, st in self.cal if lastwk <= d <= lastsun and st == "上課")
         return start, end
 
-    def live_weeks(self, wd_cn, y, m):
+    def live_weeks(self, wd_cn, y, m, stop=None):
         """直播共學(純整月制,115.11.11 修訂):該清冊計費月內,協同星期幾為上課日的次數。
         國定假日/寒假自動扣;12 月關帳由 on_days 收斂、12 月下旬併入 1 月由 calc_days 處理。
         沒有開學月延伸(舊版 9 月曾得陳碧雪4+周憶伶5;校方確認改純整月=3+4)。"""
         cn = ["星期一","星期二","星期三","星期四","星期五","星期六","星期日"]
         k = cn.index(wd_cn)
-        return sum(1 for d in self.calc_days(y, m) if d.weekday() == k)
+        return sum(1 for d in self.calc_days(y, m) if d.weekday() == k and (stop is None or d < stop))
 
     def roc(self, d):  # 民國年
         return d.year - 1911
@@ -216,7 +249,9 @@ def gen_fixed(cfg, y, m, tpl):
                 print(f"!! 警告:{name} 的排除列 {bad} 未命中任何實際節次(請核對設定檔)")
             kept = [s for s in secs if not cfg.excluded_slot(name, s, m)]
             wk = len(kept)
-            e = ovr.get(name, sum(cfg.mcnt(y, m)[s[0]] for s in kept))
+            cut = cfg.grad_cut(y, m, kept)
+            e = ovr.get(name, sum(cfg.mcnt(y, m)[s[0]] for s in kept) - cut)
+            if cut: rep.append((name, f"畢業後(6/16起)六年級停課,本月扣 {cut} 堂"))
         else:
             wk = int(person[0]["每週堂數"]) - cfg.excluded(name, "固定節數", m)
             e = ovr.get(name, xls_round(wk / 5 * days))
@@ -277,7 +312,7 @@ def gen_live(cfg, y, m, tpl):
         person = [p for p in cfg.weekly if p["姓名"] == name and p["類別"] == "直播共學"]
         assert person, f"直播共學:範本有 {name} 但設定檔沒有"
         wd = person[0]["協同日"]
-        wks = cfg.live_weeks(wd, y, m)
+        wks = cfg.live_weeks(wd, y, m, cfg.grad_stop(name, "直播共學"))
         ex = cfg.excluded(name, "直播共學", m)
         wk_h = int(person[0]["每週節數"]) - ex
         if wks - ex <= 0:
@@ -305,7 +340,12 @@ def gen_viet(cfg, y, m, tpl):
     person = cfg.viet[0]
     cn = {"星期一":0,"星期二":1,"星期三":2,"星期四":3,"星期五":4}
     wds = [cn[w.strip()] for w in str(person["上課星期(逗號分隔)"]).split(",")]
-    dates = [d for d in cfg.calc_days(y, m) if d.weekday() in wds]
+    vstop = {}
+    for g in cfg.grad:
+        if str(g["類別"]).strip() == "越南語" and str(g["姓名"] or "").strip() == str(person["姓名"]).strip():
+            w_ = str(g["星期"] or "").strip()
+            if w_ in cn: vstop[cn[w_]] = cfg._pdate(g["生效起日"])
+    dates = [d for d in cfg.calc_days(y, m) if d.weekday() in wds and d < vstop.get(d.weekday(), datetime.date.max)]
     if not dates:
         return None, {"total": 0, "n": 0, "dates": []}
     price = int(person["單價"])
